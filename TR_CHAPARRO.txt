@@ -1,0 +1,78 @@
+###creacion de la tabla donde vamos a almacenas los registros que salten en el trigger:
+
+	CREATE TABLE asientos_vendidos (
+		id_asientos_vendidos INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+		usuario VARCHAR(100) NOT NULL,
+		hora DATETIME NOT NULL,
+		fecha DATETIME NOT NULL,
+		registro INT NOT NULL
+);
+
+###LA CREACION DEL TRIGGER QUE SE VA A ACTIVAR DESPUES DE LA VENTA DE ASIENTOS:
+
+	CREATE TRIGGER tr_Asientos_Disponibles
+	AFTER UPDATE ON vuelos_disponibles
+	FOR EACH ROW
+	BEGIN
+		IF OLD.asientos_disponibles <> NEW.asientos_disponibles THEN 
+		INSERT INTO asientos_vendidos (fecha, hora, usuario, registro)
+			VALUES (CURDATE(), CURTIME(), USER(), OLD.id_vuelo);
+		END IF;
+	END;
+
+###el trigger en la primera linea del begin con un if me verifica si hubo un cambio en asientos_disponibles(venta)
+###con relacion a new.asientos_disponibles en caso de haber un cambio se efectua el if, y me guarda el registro
+### en la tabla que creamos previamente llamada asientos_vendidos, la cual guarda, fecha, hora, usuario, registro borrado(me lo trae con un old.)
+
+-------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------------
+###creacion de un trigger que detecte en la tabla vuelos_disponibles si se elimino un registro(vendio todos los asientos)
+	
+	
+	###creacion de la tabla donde vamos a almacenar registros
+	CREATE TABLE vuelos_completos(
+		id_vuelos_completos INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+		usuario VARCHAR(100) NOT NULL,
+		hora DATETIME NOT NULL,
+		fecha DATETIME NOT NULL,
+		registro INT NOT NULL
+);
+
+###creacion del trigger que se efectua sobre la tabla vuelos_disponibles
+
+	CREATE TRIGGER tr_vuelos_completos
+	AFTER DELETE ON vuelos_disponibles FOR EACH ROW
+	BEGIN
+		INSERT INTO vuelos_completos (fecha, hora, usuario, registro)
+		VALUES (CURDATE(), CURTIME(), USER(), OLD.id_vuelo);
+	END;
+ ###similar al trigger anterior pero este guarda el registro cuando todos los asientos se completaron y se borro el regitro
+ 
+ -------------------------------------------------------------------------------------------------------------------------------
+ -------------------------------------------------------------------------------------------------------------------------------
+ 
+###este trigger vamos a utilizarlo con BEFORE donde vamos a controlar con el trigger que los datos sean correctos
+
+CREATE TRIGGER	tr_before_insert
+BEFORE INSERT ON vuelos_disponibles
+FOR EACH ROW
+BEGIN
+    DECLARE precio_minimo INT DEFAULT 100;
+    DECLARE precio_maximo INT DEFAULT 1000; 
+    
+    IF NEW.precio < precio_minimo THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'El precio del vuelo no puede ser inferior a ' + CAST(precio_minimo AS CHAR);
+    ELSEIF NEW.precio > precio_maximo THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'El precio del vuelo no puede ser superior a ' + CAST(precio_maximo AS CHAR);
+    END IF;
+END;
+
+
+###declaramos las variables que vamos a usar en el if, le damos los precios x default que vamos a trabajar
+### y con un if hacemos la verificaciones y mandamos un mensaje de error x consola donde le avise al usuario
+### que los datos ingresados no son validos y mostrarle con cast los precios de las variables creadas anteriormente
+
+
+
